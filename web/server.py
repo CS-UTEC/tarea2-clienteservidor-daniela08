@@ -49,10 +49,17 @@ def read_users():
     respuesta = db_session.query(entities.User)
     users = respuesta[:]
     i = 0
+    pr1nt = ""
     for user in users:
-        print(i, "NAME:\t", user.name)
+        pr1nt += "Nombre: " + str(user.name) + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"\
+        + "Apellido: " + str(user.fullname) + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"\
+        + "Contraseña: " + str(user.password) + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"\
+        + "Usuario: " + str(user.username) + "<br>"
+        print(i, "NAME:\t", user.name, "\t\t", "FULLNAME:\t", user.fullname,
+        "\t\t", "PASSWORD:\t", user.password, "\t\t", "USERNAME:\t",
+        user.username)
         i += 1
-        return "Users read!"
+    return pr1nt
 
 
 if __name__ == '__main__':
