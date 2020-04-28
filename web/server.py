@@ -10,6 +10,21 @@ engine = db.createEngine()
 app = Flask(__name__)
 
 
+@app.route('/sumar/<n1>/<n2>')
+def sumar(n1, n2):
+    return str(int(n1) + int(n2))
+
+
+@app.route('/sumar/<n>')
+def sumar_stateful(n):
+    key = 'suma'
+    if key in session:
+        session[key] += int(n)
+    else:
+        session[key] = int(n)
+    return str(session[key])
+
+
 @app.route('/esprimo/<numero>')
 def es_primo(numero):
     num = 0
