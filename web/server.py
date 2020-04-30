@@ -25,6 +25,26 @@ def sumar_stateful(n):
     return str(session[key])
 
 
+@app.route('/login', methods = ['POST'])
+def login():
+    print(request.form.get('username'))
+    username = request.form.get('username')
+    password = request.form.get('password')
+    db_session = db.getSession(engine)
+    respuesta = db_session.query(entities.User).filter(entities.User.username \
+    == username).filter(entities.User.password == password)
+
+    users = respuesta[:]
+
+    key = 'username'
+    if len(users) > 0:
+        if key in session:
+            return str(username) + ", you're already logged in"
+        session[key] = 'username'
+        return  "Login succesful!" + "\tWelcome " + str(username) + "!"
+    return "Login failed"
+
+
 @app.route('/esprimo/<numero>')
 def es_primo(numero):
     num = 0
@@ -63,6 +83,9 @@ def read_users():
     db_session = db.getSession(engine)
     respuesta = db_session.query(entities.User)
     users = respuesta[:]
+
+    #for i in range(len(users)):
+        #print(i, users, )
     i = 0
     pr1nt = ""
     for user in users:
