@@ -10,121 +10,88 @@ engine = db.createEngine()
 app = Flask(__name__)
 
 
-@app.route('/sumar/<n1>/<n2>')
-def sumar(n1, n2):
-    return str(int(n1) + int(n2))
-
-
-@app.route('/sumar/<n>')
-def sumar_stateful(n):
-    key = 'suma'
-    if key in session:
-        session[key] += int(n)
-    else:
-        session[key] = int(n)
-    return str(session[key])
-
-
-@app.route('/login', methods = ['POST'])
-def login():
-    print(request.form.get('username'))
-    username = request.form.get('username')
-    password = request.form.get('password')
-    db_session = db.getSession(engine)
-    respuesta = db_session.query(entities.User).filter(entities.User.username \
-    == username).filter(entities.User.password == password)
-
-    users = respuesta[:]
-
-    key = 'username'
-    if len(users) > 0:
-        if key in session:
-            return str(username) + ", you're already logged in"
-        session[key] = 'username'
-        return  "Login succesful!" + "\tWelcome " + str(username) + "!"
-    return "Login failed"
-
-
-@app.route('/esprimo/<numero>')
-def es_primo(numero):
-    num = 0
-    if int(numero) >1:
-        for i in range(2, int(numero)):
-            if (int(numero) % i == 0):
-                num += 1
-        return str(num == 0)
-    return str(int(numero) == 2)
-
-
 @app.route('/static/<content>')
 def static_content(content):
     return render_template(content)
 
-
-@app.route('/create_user/<nombre>/<apellido>/<passwd>/<uname>')
-def create_user(nombre, apellido, passwd, uname):
-    #Crear un objeto (instancia de una entidad)
+##########CRUD users##########
+# 1. CREATE
+@app.route('/users', methods = ['POST'])
+def create_users():
+    body = json.loads(request.data)
     user = entities.User(
-        name = nombre,
-        fullname = apellido,
-        password = passwd,
-        username = uname
+        username = body['username'],
+        name = body['name'],
+        fullname = body['fullname'],
+        password = body['password']
     )
-
-    #Guardar el objeto en la capa de ersistencia
     db_session = db.getSession(engine)
     db_session.add(user)
     db_session.commit()
+    message = {'msg': 'User created'}
+    json_message = json.dumps(message, cls=connector.AlchemyEncoder)
+    return Response(json_message, status=201, mimetype='application/json')
 
-    return "User created!"
 
-@app.route('/read_users')
+# 2. READ
+@app.route('/users', methods = ['GET'])
 def read_users():
     db_session = db.getSession(engine)
-    respuesta = db_session.query(entities.User)
-    users = respuesta[:]
+    response = db_session.query(entities.User)
+    users = response[:]
+    json_message = json.dumps(users, cls=connector.AlchemyEncoder)
+    return Response(json_message, status = 200, mimetype='application/json')
 
-    #for i in range(len(users)):
-        #print(i, users, )
-    i = 0
-    pr1nt = ""
-    for user in users:
-        pr1nt += "Nombre: " + str(user.name) + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"\
-        + "Apellido: " + str(user.fullname) + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"\
-        + "Contraseña: " + str(user.password) + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"\
-        + "Usuario: " + str(user.username) + "<br>"
-        print(i, "NAME:\t", user.name, "\t\t", "FULLNAME:\t", user.fullname,
-        "\t\t", "PASSWORD:\t", user.password, "\t\t", "USERNAME:\t",
-        user.username)
-        i += 1
-    return pr1nt
+#por default el status ya es 200
+
+
+# 3. UPDATE
+@app.route('/users/<id>', methods=['PUT'])
+def update_user(id):
+    # Buscar al usuario con ese id
+    db_session = db.getSession(engine)
+    user = db_session.query(entities.User).filter(entities.User.id == \
+    id).first()
+
+    #Actualizamos los datos del usuario
+    body = json.loads(request.data)
+    for key in body.keys():
+        setattr(user, key, body[key])
+
+    #si no hago for hacer esto:
+    #user.username = body['username']
+    #user.name = body['name']
+    #user.fullname = body['fullname']
+    #user.password = body['password']
+    #user.id = body['id'] ??
+
+    #Guardamos la actualización
+    db_session.add(user)
+    db_session.commit()
+
+    #Responder al cliente
+    message = {'msg': 'User Updated'}
+    json_message = json.dumps(message, cls=connector.AlchemyEncoder)
+    return Response(json_message, status = 201, mimetype='application/json')
+
+# 4. DELETE
+@app.route('/users/<id>', methods=['DELETE'])
+def delete_user(id):
+    db_session = db.getSession(engine)
+    user = db_session.query(entities.User).filter(entities.User.id == \
+    id).first()
+    db_session.delete(user)
+    db_session.commit()
+
+    #Responder al cliente
+    message = {'msg':'User Deleted'}
+    json_message = json.dumps(message, cls=connector.AlchemyEncoder)
+    return Response(json_message, status=201, mimetype='application/json')
+
+
+
 
 
 if __name__ == '__main__':
     app.secret_key = ".."
     app.run(port=8080, threaded=True, host=('127.0.0.1'))
-
-
-@app.route('/saludar')
-def saludar():
-    return "HOLA2"
-
-
-@app.route('/palindrome/<palabra>')
-def es_palindromo(palabra):
-    letras = list(palabra)
-    n = len(letras)
-    reverso = ""
-    for i in range (1, n + 1):
-        reverso += letras[n - i]
-    return str(reverso == palabra)
-
-
-@app.route('/multiplo/<numero1>/<numero2>')
-def es_multiplo(numero1, numero2):
-    return str(int(numero1) % int(numero2) == 0)
-
-
-@app.errorhandler(404)
-def page_not_found(e):
-    return "NOT FOUND", 404
